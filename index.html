@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lightning Prediction System - Live Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0c2461 0%, #1e3799 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            color: #f6b93b;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .subtitle {
+            color: #81ecec;
+            font-size: 1.2rem;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .left-column, .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        
+        .card {
+            background-color: rgba(30, 40, 70, 0.8);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-left: 5px solid #3498db;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .card-title {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            color: #74b9ff;
+            font-size: 1.4rem;
+        }
+        
+        .card-title i {
+            margin-right: 12px;
+            font-size: 1.6rem;
+        }
+        
+        .sensor-data {
+            font-size: 2.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        
+        .sensor-unit {
+            font-size: 1rem;
+            color: #81ecec;
+        }
+        
+        .noise-level {
+            margin-top: 20px;
+        }
+        
+        .noise-bar {
+            height: 20px;
+            background-color: #2c3e50;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        
+        .noise-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+        
+        .noise-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+        
+        .risk-card {
+            border-left-color: #e74c3c;
+        }
+        
+        .risk-level {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+        
+        .risk-value {
+            font-size: 3.5rem;
+            font-weight: 900;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+        
+        .low { color: #2ecc71; }
+        .medium { color: #f39c12; }
+        .high { color: #e74c3c; }
+        
+        .risk-description {
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 0.95rem;
+        }
+        
+        .lightning-event {
+            border-left-color: #f1c40f;
+        }
+        
+        .lightning-distance {
+            font-size: 2.5rem;
+            color: #f1c40f;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .sky-condition {
+            text-align: center;
+            font-size: 1.8rem;
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 10px;
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+        
+        .dark { color: #636e72; }
+        .cloudy { color: #b2bec3; }
+        .clear { color: #74b9ff; }
+        
+        .connection-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 15px 25px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            font-size: 1.1rem;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .connected { background-color: #2ecc71; }
+        .disconnected { background-color: #e74c3c; }
+        .warning { background-color: #f39c12; }
+        
+        /* Fault Log Styles */
+        .fault-log-card {
+            border-left-color: #e74c3c;
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .fault-log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .log-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .log-btn {
+            background-color: rgba(52, 152, 219, 0.3);
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.3s;
+        }
+        
+        .log-btn:hover {
+            background-color: rgba(52, 152, 219, 0.6);
+        }
+        
+        .fault-log-container {
+            flex: 1;
+            overflow-y: auto;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 300px;
+        }
+        
+        .log-entry {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid;
+            background-color: rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .log-entry.error {
+            border-left-color: #e74c3c;
+            background-color: rgba(231, 76, 60, 0.1);
+        }
+        
+        .log-entry.warning {
+            border-left-color: #f39c12;
+            background-color: rgba(243, 156, 18, 0.1);
+        }
+        
+        .log-entry.info {
+            border-left-color: #3498db;
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+        
+        .log-entry.success {
+            border-left-color: #2ecc71;
+            background-color: rgba(46, 204, 113, 0.1);
+        }
+        
+        .log-time {
+            font-size: 0.8rem;
+            color: #95a5a6;
+            margin-bottom: 5px;
+        }
+        
+        .log-message {
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .log-icon {
+            margin-right: 8px;
+            font-size: 1rem;
+        }
+        
+        .fault-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 8px;
+            border-radius: 5px;
+            background-color: rgba(0, 0, 0, 0.2);
+            flex: 1;
+            margin: 0 5px;
+        }
+        
+        .stat-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        
+        .system-info {
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .info-card {
+            background-color: rgba(30, 40, 70, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .info-title {
+            color: #74b9ff;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .info-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #f6b93b;
+        }
+        
+        .info-unit {
+            font-size: 1rem;
+            color: #81ecec;
+            margin-left: 5px;
+        }
+        
+        .last-update-time {
+            font-size: 0.85rem;
+            color: #95a5a6;
+            margin-top: 5px;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 1200px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .left-column, .right-column {
+                width: 100%;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .connection-status {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .fault-stats {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .system-info {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-bolt"></i> Lightning Prediction System</h1>
+            <p class="subtitle">Real-time monitoring with Firebase integration | Live Data</p>
+        </header>
+        
+        <div class="dashboard">
+            <div class="left-column">
+                <div class="card">
+                    <div class="card-title">
+                        <i class="fas fa-thermometer-half"></i>
+                        <h2>Temperature & Humidity</h2>
+                    </div>
+                    <div class="sensor-data">
+                        <span id="temperature">--</span>
+                        <span class="sensor-unit">°C</span>
+                    </div>
+                    <div class="sensor-data">
+                        <span id="humidity">--</span>
+                        <span class="sensor-unit">% RH</span>
+                    </div>
+                    <div class="last-update-time" id="temp-update-time">Last update: --</div>
+                    <div class="noise-level">
+                        <div class="noise-label">
+                            <span>DHT11 Sensor</span>
+                            <span id="dht-status">Connecting...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">
+                        <i class="fas fa-cloud"></i>
+                        <h2>Sky Conditions</h2>
+                    </div>
+                    <div class="sky-condition" id="sky-condition">--</div>
+                    <div class="sensor-data">
+                        <span id="brightness">--</span>
+                        <span class="sensor-unit">lux</span>
+                    </div>
+                    <div class="last-update-time" id="sky-update-time">Last update: --</div>
+                    <div class="noise-level">
+                        <div class="noise-label">
+                            <span>TCS34725 RGB Sensor</span>
+                            <span id="rgb-status">Connecting...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card fault-log-card">
+                    <div class="fault-log-header">
+                        <div class="card-title">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <h2>System Fault Log</h2>
+                        </div>
+                        <div class="log-controls">
+                            <button class="log-btn" id="clear-log">Clear Log</button>
+                        </div>
+                    </div>
+                    
+                    <div class="fault-log-container" id="fault-log">
+                        <div class="log-entry info">
+                            <div class="log-time" id="current-time">--:--:--</div>
+                            <div class="log-message">
+                                <i class="fas fa-info-circle log-icon"></i>
+                                Dashboard initialized. Connecting to Firebase...
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="fault-stats">
+                        <div class="stat-item">
+                            <div>Total Logs</div>
+                            <div class="stat-value" id="total-logs">1</div>
+                        </div>
+                        <div class="stat-item">
+                            <div>Errors</div>
+                            <div class="stat-value" id="error-logs">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div>Warnings</div>
+                            <div class="stat-value" id="warning-logs">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div>ESP32 Online</div>
+                            <div class="stat-value" id="esp32-status">No</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="right-column">
+                <div class="card">
+                    <div class="card-title">
+                        <i class="fas fa-volume-up"></i>
+                        <h2>Noise Levels</h2>
+                    </div>
+                    <div class="noise-level">
+                        <div class="noise-label">
+                            <span>HV Pulse Noise</span>
+                            <span id="hv-noise-value">--/10</span>
+                        </div>
+                        <div class="noise-bar">
+                            <div class="noise-fill" id="hv-noise-bar" style="width: 0%; background-color: #3498db;"></div>
+                        </div>
+                    </div>
+                    <div class="noise-level">
+                        <div class="noise-label">
+                            <span>Lightning Sensor Noise</span>
+                            <span id="lightning-noise-value">--/10</span>
+                        </div>
+                        <div class="noise-bar">
+                            <div class="noise-fill" id="lightning-noise-bar" style="width: 0%; background-color: #9b59b6;"></div>
+                        </div>
+                    </div>
+                    <div class="noise-level">
+                        <div class="noise-label">
+                            <span>Total Noise</span>
+                            <span id="total-noise-value">--/20</span>
+                        </div>
+                        <div class="noise-bar">
+                            <div class="noise-fill" id="total-noise-bar" style="width: 0%; background-color: #e74c3c;"></div>
+                        </div>
+                    </div>
+                    <div class="last-update-time" id="noise-update-time">Last update: --</div>
+                </div>
+                
+                <div class="card lightning-event">
+                    <div class="card-title">
+                        <i class="fas fa-bolt"></i>
+                        <h2>Lightning Detection</h2>
+                    </div>
+                    <div class="lightning-distance">
+                        <span id="lightning-distance">--</span>
+                        <span class="sensor-unit">km</span>
+                    </div>
+                    <div class="last-update-time" id="lightning-update-time">Last detection: --</div>
+                    <div class="noise-level">
+                        <div class="noise-label">
+                            <span>AS3935 Lightning Sensor</span>
+                            <span id="as3935-status">Connecting...</span>
+                        </div>
+                    </div>
+                    <div class="noise-level">
+                        <div class="noise-label">
+                            <span>Last Event</span>
+                            <span id="last-event">Never</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card risk-card">
+                    <div class="card-title">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h2>Lightning Risk Assessment</h2>
+                    </div>
+                    <div class="risk-level">
+                        <div class="risk-value low" id="risk-level">--</div>
+                        <div class="risk-icon">
+                            <i class="fas fa-shield-alt" style="font-size: 4rem; color: #95a5a6;"></i>
+                        </div>
+                    </div>
+                    <div class="risk-description" id="risk-description">
+                        Waiting for data from ESP32 system...
+                    </div>
+                    <div class="last-update-time" id="risk-update-time">Last assessment: --</div>
+                    <div class="noise-level">
+                        <div class="noise-label">
+                            <span>Risk Factors: Humidity > 70%, Sky Brightness < 1500, Total Noise ≥ 8</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="connection-status">
+            <div class="status-item">
+                <div class="status-dot" id="firebase-dot"></div>
+                <span>Firebase: <strong id="firebase-status">Connecting...</strong></span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot" id="wifi-dot"></div>
+                <span>ESP32 Online: <strong id="esp32-connection">No</strong></span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot connected"></div>
+                <span>Dashboard Uptime: <strong id="uptime">00:00:00</strong></span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot" id="data-dot"></div>
+                <span>Last Data: <strong id="last-update">Never</strong></span>
+            </div>
+        </div>
+        
+        <div class="system-info">
+            <div class="info-card">
+                <div class="info-title">
+                    <i class="fas fa-microchip"></i>
+                    <span>ESP32 System</span>
+                </div>
+                <div class="info-value">Active</div>
+                <div class="info-unit" id="esp32-uptime">Uptime: --</div>
+            </div>
+            
+            <div class="info-card">
+                <div class="info-title">
+                    <i class="fas fa-satellite-dish"></i>
+                    <span>Update Interval</span>
+                </div>
+                <div class="info-value">2</div>
+                <div class="info-unit">seconds</div>
+            </div>
+            
+            <div class="info-card">
+                <div class="info-title">
+                    <i class="fas fa-database"></i>
+                    <span>Data Points</span>
+                </div>
+                <div class="info-value">8</div>
+                <div class="info-unit">parameters</div>
+            </div>
+            
+            <div class="info-card">
+                <div class="info-title">
+                    <i class="fas fa-fire"></i>
+                    <span>Firebase Path</span>
+                </div>
+                <div class="info-value">/LightningPrediction</div>
+                <div class="info-unit">Database</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= FIREBASE CONFIGURATION =================
+        // Using YOUR Firebase configuration from your ESP32 code
+        const firebaseConfig = {
+            databaseURL: "https://lightning-prediction-sky-rgb-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "lightning-prediction-sky-rgb"
+        };
+        
+        // Initialize Firebase
+        let firebaseInitialized = false;
+        let database;
+        
+        function initializeFirebase() {
+            try {
+                const app = firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                firebaseInitialized = true;
+                
+                updateFirebaseStatus(true, "Connected");
+                addLog("Firebase", "Successfully connected to Firebase database", "success");
+                
+                // Start listening for data
+                setupFirebaseListeners();
+                
+            } catch (error) {
+                console.error("Firebase initialization error:", error);
+                updateFirebaseStatus(false, `Error: ${error.message}`);
+                addLog("Firebase Error", `Failed to connect: ${error.message}`, "error");
+            }
+        }
+        
+        // ================= FAULT LOG SYSTEM =================
+        class FaultLogger {
+            constructor() {
+                this.logs = [];
+                this.errorCount = 0;
+                this.warningCount = 0;
+                this.startTime = new Date();
+                this.logContainer = document.getElementById('fault-log');
+                this.initLogs();
+            }
+            
+            initLogs() {
+                // Add initial log entry
+                this.addLog("Dashboard Start", "Lightning Prediction Dashboard initialized", "info");
+            }
+            
+            addLog(title, message, type = 'info') {
+                const now = new Date();
+                const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+                
+                const logEntry = {
+                    time: timeString,
+                    title: title,
+                    message: message,
+                    type: type,
+                    timestamp: now
+                };
+                
+                this.logs.unshift(logEntry);
+                
+                // Update counters
+                if (type === 'error') this.errorCount++;
+                if (type === 'warning') this.warningCount++;
+                
+                // Render log entry
+                this.renderLogEntry(logEntry);
+                
+                // Update stats
+                this.updateStats();
+                
+                // Keep only last 50 logs
+                if (this.logs.length > 50) {
+                    this.logs.pop();
+                    const entries = this.logContainer.querySelectorAll('.log-entry');
+                    if (entries.length > 50) {
+                        entries[entries.length - 1].remove();
+                    }
+                }
+                
+                // Scroll to top
+                this.logContainer.scrollTop = 0;
+                
+                return logEntry;
+            }
+            
+            renderLogEntry(log) {
+                const logElement = document.createElement('div');
+                logElement.className = `log-entry ${log.type}`;
+                
+                const iconMap = {
+                    'error': 'exclamation-circle',
+                    'warning': 'exclamation-triangle',
+                    'info': 'info-circle',
+                    'success': 'check-circle'
+                };
+                
+                logElement.innerHTML = `
+                    <div class="log-time">${log.time} - ${log.title}</div>
+                    <div class="log-message">
+                        <i class="fas fa-${iconMap[log.type]} log-icon"></i>
+                        ${log.message}
+                    </div>
+                `;
+                
+                this.logContainer.prepend(logElement);
+            }
+            
+            clearLog() {
+                // Keep the first log entry
+                const firstEntry = this.logs[this.logs.length - 1];
+                this.logs = [firstEntry];
+                this.errorCount = 0;
+                this.warningCount = 0;
+                this.logContainer.innerHTML = '';
+                this.renderLogEntry(firstEntry);
+                this.addLog("Log Cleared", "Fault log has been cleared", "info");
+            }
+            
+            updateStats() {
+                document.getElementById('total-logs').textContent = this.logs.length;
+                document.getElementById('error-logs').textContent = this.errorCount;
+                document.getElementById('warning-logs').textContent = this.warningCount;
+            }
+            
+            getUptime() {
+                const now = new Date();
+                const diffMs = now - this.startTime;
+                const diffHrs = Math.floor(diffMs / 3600000);
+                const diffMins = Math.floor((diffMs % 3600000) / 60000);
+                const diffSecs = Math.floor((diffMs % 60000) / 1000);
+                
+                return `${diffHrs.toString().padStart(2, '0')}:${diffMins.toString().padStart(2, '0')}:${diffSecs.toString().padStart(2, '0')}`;
+            }
+        }
+        
+        // ================= GLOBAL VARIABLES =================
+        const faultLogger = new FaultLogger();
+        let lastDataTimestamp = 0;
+        let esp32Uptime = 0;
+        let dataUpdateInterval;
+        
+        // ================= FIREBASE LISTENERS =================
+        function setupFirebaseListeners() {
+            if (!firebaseInitialized || !database) {
+                addLog("System Error", "Firebase not initialized", "error");
+                return;
+            }
+            
+            // Listen to the main data path
+            const dataRef = database.ref('/LightningPrediction');
+            
+            dataRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    updateDashboard(data);
+                    updateESP32Status(true);
+                    lastDataTimestamp = Date.now();
+                    
+                    // Update ESP32 uptime if available
+                    if (data.timestamp) {
+                        esp32Uptime = data.timestamp;
+                        updateESP32Uptime(data.timestamp);
+                    }
+                    
+                    addLog("Data Update", "Received new data from ESP32", "info");
+                } else {
+                    updateESP32Status(false);
+                    addLog("Data Warning", "No data received from ESP32", "warning");
+                }
+            }, (error) => {
+                console.error("Firebase read error:", error);
+                updateFirebaseStatus(false, `Read error: ${error.message}`);
+                updateESP32Status(false);
+                addLog("Firebase Error", `Data read failed: ${error.message}`, "error");
+            });
+        }
+        
+        // ================= DASHBOARD UPDATE FUNCTIONS =================
+        function updateDashboard(data) {
+            const now = new Date();
+            const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            
+            // Update temperature and humidity
+            if (data.temperature !== undefined) {
+                document.getElementById('temperature').textContent = data.temperature.toFixed(1);
+                document.getElementById('temp-update-time').textContent = `Last update: ${timeString}`;
+            }
+            
+            if (data.humidity !== undefined) {
+                document.getElementById('humidity').textContent = Math.round(data.humidity);
+            }
+            
+            // Update sky brightness and condition
+            if (data.sky_brightness !== undefined) {
+                const brightness = data.sky_brightness;
+                document.getElementById('brightness').textContent = brightness;
+                document.getElementById('sky-update-time').textContent = `Last update: ${timeString}`;
+                
+                // Determine sky condition
+                let skyCondition = "CLEAR";
+                let skyClass = "clear";
+                if (brightness < 1500) {
+                    skyCondition = "DARK";
+                    skyClass = "dark";
+                } else if (brightness < 3000) {
+                    skyCondition = "CLOUDY";
+                    skyClass = "cloudy";
+                }
+                
+                const skyElement = document.getElementById('sky-condition');
+                skyElement.textContent = skyCondition;
+                skyElement.className = `sky-condition ${skyClass}`;
+            }
+            
+            // Update noise levels
+            if (data.hv_noise !== undefined) {
+                const hvNoise = data.hv_noise;
+                document.getElementById('hv-noise-value').textContent = `${hvNoise}/10`;
+                document.getElementById('hv-noise-bar').style.width = `${hvNoise * 10}%`;
+            }
+            
+            if (data.lightning_noise !== undefined) {
+                const lgtNoise = data.lightning_noise;
+                document.getElementById('lightning-noise-value').textContent = `${lgtNoise}/10`;
+                document.getElementById('lightning-noise-bar').style.width = `${lgtNoise * 10}%`;
+            }
+            
+            // Update total noise
+            if (data.hv_noise !== undefined && data.lightning_noise !== undefined) {
+                const totalNoise = data.hv_noise + data.lightning_noise;
+                document.getElementById('total-noise-value').textContent = `${totalNoise}/20`;
+                document.getElementById('total-noise-bar').style.width = `${totalNoise * 5}%`;
+                document.getElementById('noise-update-time').textContent = `Last update: ${timeString}`;
+            }
+            
+            // Update lightning distance
+            if (data.lightning_distance !== undefined) {
+                const distance = data.lightning_distance;
+                if (distance >= 0) {
+                    document.getElementById('lightning-distance').textContent = distance;
+                    document.getElementById('lightning-update-time').textContent = `Last detection: ${timeString}`;
+                    
+                    // Log lightning events
+                    if (distance > 0 && distance <= 40) {
+                        addLog("Lightning Alert", `Lightning detected at ${distance}km`, "warning");
+                    }
+                } else {
+                    document.getElementById('lightning-distance').textContent = "--";
+                }
+            }
+            
+            // Update risk assessment
+            if (data.risk !== undefined) {
+                const risk = data.risk;
+                document.getElementById('risk-level').textContent = risk;
+                document.getElementById('risk-update-time').textContent = `Last assessment: ${timeString}`;
+                
+                // Set risk color and description
+                let riskClass = "low";
+                let riskIconColor = "#2ecc71";
+                let riskDescription = "Current atmospheric conditions indicate a low risk of lightning activity.";
+                
+                if (risk === "HIGH") {
+                    riskClass = "high";
+                    riskIconColor = "#e74c3c";
+                    riskDescription = "HIGH RISK! Conditions favorable for lightning. Take immediate precautions.";
+                } else if (risk === "MEDIUM") {
+                    riskClass = "medium";
+                    riskIconColor = "#f39c12";
+                    riskDescription = "Medium risk of lightning. Monitor conditions closely.";
+                }
+                
+                document.getElementById('risk-level').className = `risk-value ${riskClass}`;
+                document.getElementById('risk-description').textContent = riskDescription;
+                document.querySelector('.risk-icon i').style.color = riskIconColor;
+            }
+            
+            // Update last event time
+            if (data.timestamp) {
+                const currentTime = Date.now();
+                const dataTime = data.timestamp;
+                const timeDiff = Math.floor((currentTime - dataTime) / 1000);
+                
+                if (timeDiff < 60) {
+                    document.getElementById('last-event').textContent = "Just now";
+                } else if (timeDiff < 3600) {
+                    document.getElementById('last-event').textContent = `${Math.floor(timeDiff / 60)} min ago`;
+                } else {
+                    document.getElementById('last-event').textContent = `${Math.floor(timeDiff / 3600)} hours ago`;
+                }
+            }
+            
+            // Update sensor status
+            updateSensorStatus(data);
+            
+            // Update last data time
+            updateLastDataTime();
+        }
+        
+        function updateSensorStatus(data) {
+            // Simple logic to determine sensor status based on data validity
+            if (data.temperature !== undefined && data.humidity !== undefined) {
+                document.getElementById('dht-status').textContent = "Active";
+                document.getElementById('dht-status').style.color = "#2ecc71";
+            } else {
+                document.getElementById('dht-status').textContent = "Error";
+                document.getElementById('dht-status').style.color = "#e74c3c";
+            }
+            
+            if (data.sky_brightness !== undefined) {
+                document.getElementById('rgb-status').textContent = "Active";
+                document.getElementById('rgb-status').style.color = "#2ecc71";
+            } else {
+                document.getElementById('rgb-status').textContent = "Error";
+                document.getElementById('rgb-status').style.color = "#e74c3c";
+            }
+            
+            if (data.lightning_distance !== undefined || data.lightning_noise !== undefined) {
+                document.getElementById('as3935-status').textContent = "Active";
+                document.getElementById('as3935-status').style.color = "#2ecc71";
+            } else {
+                document.getElementById('as3935-status').textContent = "Error";
+                document.getElementById('as3935-status').style.color = "#e74c3c";
+            }
+        }
+        
+        function updateESP32Status(isOnline) {
+            const statusElement = document.getElementById('esp32-connection');
+            const dotElement = document.getElementById('wifi-dot');
+            const statsElement = document.getElementById('esp32-status');
+            
+            if (isOnline) {
+                statusElement.textContent = "Yes";
+                statusElement.style.color = "#2ecc71";
+                dotElement.className = "status-dot connected";
+                statsElement.textContent = "Yes";
+                statsElement.style.color = "#2ecc71";
+            } else {
+                statusElement.textContent = "No";
+                statusElement.style.color = "#e74c3c";
+                dotElement.className = "status-dot disconnected";
+                statsElement.textContent = "No";
+                statsElement.style.color = "#e74c3c";
+            }
+        }
+        
+        function updateESP32Uptime(timestamp) {
+            const uptimeMs = timestamp;
+            const hours = Math.floor(uptimeMs / 3600000);
+            const minutes = Math.floor((uptimeMs % 3600000) / 60000);
+            const seconds = Math.floor((uptimeMs % 60000) / 1000);
+            
+            document.getElementById('esp32-uptime').textContent = 
+                `Uptime: ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        function updateFirebaseStatus(isConnected, message) {
+            const statusElement = document.getElementById('firebase-status');
+            const dotElement = document.getElementById('firebase-dot');
+            
+            if (isConnected) {
+                statusElement.textContent = message;
+                statusElement.style.color = "#2ecc71";
+                dotElement.className = "status-dot connected";
+            } else {
+                statusElement.textContent = message;
+                statusElement.style.color = "#e74c3c";
+                dotElement.className = "status-dot disconnected";
+            }
+        }
+        
+        function updateLastDataTime() {
+            const now = new Date();
+            const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            
+            document.getElementById('last-update').textContent = timeString;
+            
+            // Update data dot color based on freshness
+            const dataDot = document.getElementById('data-dot');
+            const timeSinceLastData = Date.now() - lastDataTimestamp;
+            
+            if (lastDataTimestamp === 0) {
+                dataDot.className = "status-dot disconnected";
+            } else if (timeSinceLastData < 10000) { // 10 seconds
+                dataDot.className = "status-dot connected";
+            } else if (timeSinceLastData < 30000) { // 30 seconds
+                dataDot.className = "status-dot warning";
+            } else {
+                dataDot.className = "status-dot disconnected";
+            }
+        }
+        
+        function addLog(title, message, type = 'info') {
+            faultLogger.addLog(title, message, type);
+        }
+        
+        // ================= TIME FUNCTIONS =================
+        function updateCurrentTime() {
+            const now = new Date();
+            const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            document.getElementById('current-time').textContent = timeString;
+            document.getElementById('uptime').textContent = faultLogger.getUptime();
+        }
+        
+        // ================= EVENT LISTENERS =================
+        document.getElementById('clear-log').addEventListener('click', () => {
+            faultLogger.clearLog();
+        });
+        
+        // ================= INITIALIZATION =================
+        function initializeDashboard() {
+            // Start time updates
+            setInterval(updateCurrentTime, 1000);
+            
+            // Initialize Firebase
+            initializeFirebase();
+            
+            // Check data freshness every 5 seconds
+            setInterval(() => {
+                if (lastDataTimestamp > 0) {
+                    const timeSinceLastData = Date.now() - lastDataTimestamp;
+                    if (timeSinceLastData > 10000) { // 10 seconds
+                        updateESP32Status(false);
+                        if (timeSinceLastData > 30000) { // 30 seconds
+                            addLog("Connection Warning", "No data from ESP32 for 30+ seconds", "warning");
+                        }
+                    }
+                }
+            }, 5000);
+            
+            addLog("System", "Dashboard initialization complete", "success");
+        }
+        
+        // Start the dashboard when page loads
+        document.addEventListener('DOMContentLoaded', initializeDashboard);
+    </script>
+</body>
+</html>
